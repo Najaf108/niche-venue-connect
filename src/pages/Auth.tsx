@@ -5,7 +5,9 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { useAuth } from '@/hooks/useAuth';
+import { useAuthState } from '@/hooks/useAuthState';
+import { supabase } from '@/integrations/supabase/client';
+import { useToast } from '@/hooks/use-toast';
 import { Loader2 } from 'lucide-react';
 
 const Auth = () => {
@@ -18,8 +20,9 @@ const Auth = () => {
     displayName: '' 
   });
   
-  const { signIn, signUp, user, loading } = useAuth();
+  const { user, loading } = useAuthState();
   const navigate = useNavigate();
+  const { toast } = useToast();
 
   // Redirect if already authenticated
   useEffect(() => {
@@ -32,10 +35,31 @@ const Auth = () => {
     e.preventDefault();
     setIsLoading(true);
     
-    const { error } = await signIn(loginForm.email, loginForm.password);
-    
-    if (!error) {
-      navigate('/', { replace: true });
+    try {
+      const { error } = await supabase.auth.signInWithPassword({
+        email: loginForm.email,
+        password: loginForm.password,
+      });
+      
+      if (error) {
+        toast({
+          title: "Sign In Failed",
+          description: error.message,
+          variant: "destructive",
+        });
+      } else {
+        toast({
+          title: "Welcome back!",
+          description: "You have successfully signed in.",
+        });
+        navigate('/', { replace: true });
+      }
+    } catch (error: any) {
+      toast({
+        title: "Sign In Error",
+        description: "An unexpected error occurred.",
+        variant: "destructive",
+      });
     }
     
     setIsLoading(false);
@@ -45,19 +69,48 @@ const Auth = () => {
     e.preventDefault();
     
     if (signupForm.password !== signupForm.confirmPassword) {
+      toast({
+        title: "Password Mismatch",
+        description: "Passwords don't match. Please try again.",
+        variant: "destructive",
+      });
       return;
     }
     
     setIsLoading(true);
     
-    const { error } = await signUp(
-      signupForm.email, 
-      signupForm.password, 
-      signupForm.displayName
-    );
-    
-    if (!error) {
-      // Stay on auth page to show verification message
+    try {
+      const redirectUrl = `${window.location.origin}/`;
+      
+      const { error } = await supabase.auth.signUp({
+        email: signupForm.email,
+        password: signupForm.password,
+        options: {
+          emailRedirectTo: redirectUrl,
+          data: {
+            display_name: signupForm.displayName || '',
+          }
+        }
+      });
+      
+      if (error) {
+        toast({
+          title: "Sign Up Failed",
+          description: error.message,
+          variant: "destructive",
+        });
+      } else {
+        toast({
+          title: "Account Created!",
+          description: "Please check your email to verify your account.",
+        });
+      }
+    } catch (error: any) {
+      toast({
+        title: "Sign Up Error",
+        description: "An unexpected error occurred.",
+        variant: "destructive",
+      });
     }
     
     setIsLoading(false);
