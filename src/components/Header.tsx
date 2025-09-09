@@ -1,7 +1,20 @@
 import { Button } from "@/components/ui/button";
-import { Search, Menu, User, Heart, Calendar } from "lucide-react";
+import { Search, Menu, User, Heart, Calendar, LogOut } from "lucide-react";
+import { useAuth } from "@/hooks/useAuth";
+import { useNavigate } from "react-router-dom";
 
 const Header = () => {
+  const { user, signOut } = useAuth();
+  const navigate = useNavigate();
+
+  const handleAuthClick = () => {
+    if (user) {
+      signOut();
+    } else {
+      navigate('/auth');
+    }
+  };
+
   return (
     <header className="sticky top-0 z-50 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 border-b border-border">
       <div className="container mx-auto px-4 py-4">
@@ -41,9 +54,18 @@ const Header = () => {
               My Bookings
             </Button>
 
-            <Button variant="primary" size="sm">
-              <User className="w-4 h-4 mr-2" />
-              Sign In
+            <Button variant="primary" size="sm" onClick={handleAuthClick}>
+              {user ? (
+                <>
+                  <LogOut className="w-4 h-4 mr-2" />
+                  Sign Out
+                </>
+              ) : (
+                <>
+                  <User className="w-4 h-4 mr-2" />
+                  Sign In
+                </>
+              )}
             </Button>
 
             {/* Mobile menu */}
