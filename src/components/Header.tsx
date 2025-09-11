@@ -46,9 +46,12 @@ const Header = () => {
 
           {/* Navigation - Hidden on mobile */}
           <nav className="hidden md:flex items-center space-x-8">
-            <a href="#" className="text-foreground hover:text-primary transition-colors">
+            <button 
+              onClick={() => navigate('/browse-spaces')}
+              className="text-foreground hover:text-primary transition-colors"
+            >
               Browse Spaces
-            </a>
+            </button>
             <button 
               onClick={() => navigate('/how-it-works')}
               className="text-foreground hover:text-primary transition-colors"
