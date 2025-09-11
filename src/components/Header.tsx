@@ -49,9 +49,12 @@ const Header = () => {
             <a href="#" className="text-foreground hover:text-primary transition-colors">
               Browse Spaces
             </a>
-            <a href="#" className="text-foreground hover:text-primary transition-colors">
+            <button 
+              onClick={() => navigate('/how-it-works')}
+              className="text-foreground hover:text-primary transition-colors"
+            >
               How it Works
-            </a>
+            </button>
             <button 
               onClick={() => navigate('/list-space')}
               className="text-foreground hover:text-primary transition-colors"
