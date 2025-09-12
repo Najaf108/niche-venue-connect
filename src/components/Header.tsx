@@ -68,12 +68,22 @@ const Header = () => {
 
           {/* User Actions */}
           <div className="flex items-center space-x-3">
-            <Button variant="ghost" size="sm" className="hidden sm:flex">
+            <Button 
+              variant="ghost" 
+              size="sm" 
+              className="hidden sm:flex"
+              onClick={() => navigate('/wishlist')}
+            >
               <Heart className="w-4 h-4 mr-2" />
               Wishlist
             </Button>
             
-            <Button variant="ghost" size="sm" className="hidden sm:flex">
+            <Button 
+              variant="ghost" 
+              size="sm" 
+              className="hidden sm:flex"
+              onClick={() => navigate('/my-bookings')}
+            >
               <Calendar className="w-4 h-4 mr-2" />
               My Bookings
             </Button>
