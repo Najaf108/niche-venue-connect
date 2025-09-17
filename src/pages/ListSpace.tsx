@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -10,13 +10,17 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { CalendarIcon, ArrowLeft } from "lucide-react";
+import { CalendarIcon, ArrowLeft, Upload, X, Image as ImageIcon } from "lucide-react";
 import { format } from "date-fns";
 import { cn } from "@/lib/utils";
 import { useAuthState } from "@/hooks/useAuthState";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import Header from "@/components/Header";
+import { ScrollArea } from "@/components/ui/scroll-area";
+
+const MAX_FILE_SIZE = 5 * 1024 * 1024; // 5MB
+const ACCEPTED_IMAGE_TYPES = ["image/jpeg", "image/jpg", "image/png", "image/gif"];
 
 const listingSchema = z.object({
   title: z.string().min(5, "Title must be at least 5 characters"),
@@ -29,6 +33,7 @@ const listingSchema = z.object({
   bathrooms: z.number().min(1, "At least 1 bathroom required"),
   available_from: z.date().optional(),
   available_to: z.date().optional(),
+  // Images are handled separately from the form validation
 });
 
 type ListingFormData = z.infer<typeof listingSchema>;
@@ -38,6 +43,9 @@ const ListSpace = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [images, setImages] = useState<File[]>([]);
+  const [previews, setPreviews] = useState<string[]>([]);
+  const [uploadError, setUploadError] = useState<string | null>(null);
 
   const form = useForm<ListingFormData>({
     resolver: zodResolver(listingSchema),
@@ -67,11 +75,92 @@ const ListSpace = () => {
     );
   }
 
+  // Handle file selection
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setUploadError(null);
+    const selectedFiles = Array.from(e.target.files || []);
+    
+    // Validate file types and sizes
+    const invalidFiles = selectedFiles.filter(
+      file => !ACCEPTED_IMAGE_TYPES.includes(file.type) || file.size > MAX_FILE_SIZE
+    );
+    
+    if (invalidFiles.length > 0) {
+      setUploadError(
+        `Some files were not added: ${invalidFiles.length} file(s) exceed 5MB or are not in JPG, PNG, or GIF format.`
+      );
+      // Filter out invalid files
+      const validFiles = selectedFiles.filter(
+        file => ACCEPTED_IMAGE_TYPES.includes(file.type) && file.size <= MAX_FILE_SIZE
+      );
+      addValidFiles(validFiles);
+    } else {
+      addValidFiles(selectedFiles);
+    }
+  };
+  
+  // Add valid files to state
+  const addValidFiles = (files: File[]) => {
+    if (files.length === 0) return;
+    
+    // Create object URLs for previews
+    const newPreviews = files.map(file => URL.createObjectURL(file));
+    
+    setImages(prev => [...prev, ...files]);
+    setPreviews(prev => [...prev, ...newPreviews]);
+  };
+  
+  // Remove an image
+  const removeImage = (index: number) => {
+    setImages(prev => prev.filter((_, i) => i !== index));
+    
+    // Revoke the object URL to avoid memory leaks
+    URL.revokeObjectURL(previews[index]);
+    setPreviews(prev => prev.filter((_, i) => i !== index));
+  };
+
+  // Upload images to Supabase Storage
+  const uploadImages = async (): Promise<string[]> => {
+    if (images.length === 0) return [];
+    
+    const imageUrls: string[] = [];
+    
+    for (const image of images) {
+      const fileExt = image.name.split('.').pop();
+      const fileName = `${Math.random().toString(36).substring(2, 15)}_${Date.now()}.${fileExt}`;
+      const filePath = `${user!.id}/${fileName}`;
+      
+      const { data, error } = await supabase.storage
+        .from('listing-images')
+        .upload(filePath, image, {
+          cacheControl: '3600',
+          upsert: false
+        });
+      
+      if (error) {
+        console.error('Error uploading image:', error);
+        throw new Error(`Failed to upload image: ${error.message}`);
+      }
+      
+      // Get the public URL
+      const { data: { publicUrl } } = supabase.storage
+        .from('listing-images')
+        .getPublicUrl(filePath);
+      
+      imageUrls.push(publicUrl);
+    }
+    
+    return imageUrls;
+  };
+
   const onSubmit = async (data: ListingFormData) => {
     if (!user) return;
 
     setIsSubmitting(true);
     try {
+      // First upload images
+      const imageUrls = await uploadImages();
+      
       const listingData = {
         user_id: user.id,
         title: data.title,
@@ -84,6 +173,7 @@ const ListSpace = () => {
         bathrooms: data.bathrooms,
         available_from: data.available_from ? format(data.available_from, 'yyyy-MM-dd') : null,
         available_to: data.available_to ? format(data.available_to, 'yyyy-MM-dd') : null,
+        images: imageUrls.length > 0 ? imageUrls : null,
       };
 
       const { error } = await supabase
@@ -369,6 +459,67 @@ const ListSpace = () => {
                       </FormItem>
                     )}
                   />
+                </div>
+                
+                {/* Image Upload Section */}
+                <div className="space-y-4">
+                  <div className="flex flex-col space-y-2">
+                    <FormLabel>Property Images</FormLabel>
+                    <div className="flex items-center gap-4">
+                      <label 
+                        htmlFor="image-upload" 
+                        className="flex items-center justify-center gap-2 px-4 py-2 border-2 border-dashed border-primary/50 rounded-md cursor-pointer hover:bg-primary/5 transition-colors"
+                      >
+                        <Upload className="h-5 w-5 text-primary" />
+                        <span className="text-sm font-medium">Upload Images</span>
+                        <input
+                          id="image-upload"
+                          type="file"
+                          accept="image/jpeg,image/png,image/gif"
+                          multiple
+                          className="hidden"
+                          onChange={handleFileChange}
+                        />
+                      </label>
+                      <p className="text-xs text-muted-foreground">
+                        JPG, PNG or GIF (max. 5MB per image)
+                      </p>
+                    </div>
+                    {uploadError && (
+                      <p className="text-sm text-destructive mt-2">{uploadError}</p>
+                    )}
+                  </div>
+                  
+                  {/* Image Previews */}
+                  {previews.length > 0 && (
+                    <ScrollArea className="h-[200px] w-full rounded-md border p-4">
+                      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
+                        {previews.map((preview, index) => (
+                          <div key={index} className="relative group rounded-md overflow-hidden border border-border">
+                            <img 
+                              src={preview} 
+                              alt={`Preview ${index + 1}`} 
+                              className="h-24 w-full object-cover"
+                            />
+                            <button
+                              type="button"
+                              onClick={() => removeImage(index)}
+                              className="absolute top-1 right-1 bg-background/80 p-1 rounded-full opacity-0 group-hover:opacity-100 transition-opacity"
+                            >
+                              <X className="h-4 w-4 text-destructive" />
+                            </button>
+                          </div>
+                        ))}
+                      </div>
+                    </ScrollArea>
+                  )}
+                  
+                  {previews.length === 0 && (
+                    <div className="flex flex-col items-center justify-center h-[100px] border border-dashed rounded-md bg-muted/30">
+                      <ImageIcon className="h-8 w-8 text-muted-foreground mb-2" />
+                      <p className="text-sm text-muted-foreground">No images selected</p>
+                    </div>
+                  )}
                 </div>
 
                 <div className="flex gap-4 pt-6">
