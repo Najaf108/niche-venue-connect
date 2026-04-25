@@ -1,62 +1,82 @@
+import { useState, useEffect } from "react";
 import ListingCard from "./ListingCard";
 import { Button } from "@/components/ui/button";
+import { supabase } from "@/integrations/supabase/client";
+import { Loader2 } from "lucide-react";
+import { useNavigate } from "react-router-dom";
 
-const featuredListings = [
-  {
-    id: "1",
-    title: "Ultimate Gaming Paradise",
-    description: "Professional gaming setup with RTX 4090, 144Hz monitors, and premium gaming chairs. Perfect for streaming or tournaments.",
-    location: "Downtown",
-    price: 25,
-    rating: 4.9,
-    reviewCount: 124,
-    imageUrl: "https://images.unsplash.com/photo-1616763355548-1b606f439f86?auto=format&fit=crop&w=800&q=80",
-    category: "Gaming Room",
-    amenities: ["Wi-Fi", "Up to 8 people", "24/7 Access"],
-    hostName: "Alex Chen",
-  },
-  {
-    id: "2", 
-    title: "Professional Podcast Studio",
-    description: "Acoustically treated studio with professional mics, mixing board, and recording equipment. Ideal for podcasts and interviews.",
-    location: "Arts District",
-    price: 35,
-    rating: 4.8,
-    reviewCount: 89,
-    imageUrl: "https://images.unsplash.com/photo-1590602847861-f357a9332bbc?auto=format&fit=crop&w=800&q=80",
-    category: "Podcast Studio",
-    amenities: ["Wi-Fi", "Up to 4 people", "Recording Equipment"],
-    hostName: "Sarah Johnson",
-  },
-  {
-    id: "3",
-    title: "Bright Art Studio Space",
-    description: "Spacious studio with natural light, easels, and art supplies included. Perfect for painting, drawing, or creative workshops.",
-    location: "Creative Quarter", 
-    price: 20,
-    rating: 4.7,
-    reviewCount: 156,
-    imageUrl: "https://images.unsplash.com/photo-1513475382585-d06e58bcb0e0?auto=format&fit=crop&w=800&q=80",
-    category: "Art Studio",
-    amenities: ["Wi-Fi", "Up to 12 people", "Art Supplies"],
-    hostName: "Maria Rodriguez",
-  },
-  {
-    id: "4",
-    title: "Modern Meeting Room",
-    description: "Professional meeting space with 75\" screen, whiteboard, and video conferencing setup. Great for team meetings and presentations.",
-    location: "Business District",
-    price: 40,
-    rating: 4.9,
-    reviewCount: 203,
-    imageUrl: "https://images.unsplash.com/photo-1497366216548-37526070297c?auto=format&fit=crop&w=800&q=80",
-    category: "Meeting Room",
-    amenities: ["Wi-Fi", "Up to 10 people", "AV Equipment"],
-    hostName: "David Kim",
-  },
-];
+interface Listing {
+  id: string;
+  title: string;
+  description: string;
+  location: string;
+  price_per_night: number;
+  space_type: string;
+  max_guests: number;
+  images: string[];
+  amenities?: string[];
+  user_id: string;
+  is_active: boolean;
+  created_at: string;
+  reviews?: { rating: number }[];
+}
 
 const FeaturedListings = () => {
+  const [listings, setListings] = useState<Listing[]>([]);
+  const [loading, setLoading] = useState(true);
+  const navigate = useNavigate();
+
+  useEffect(() => {
+    fetchListings();
+  }, []);
+
+  const fetchListings = async () => {
+    try {
+      setLoading(true);
+      const { data, error } = await supabase
+        .from('listings')
+        .select(`
+          *,
+          reviews(rating)
+        `)
+        .eq('is_active', true)
+        .order('created_at', { ascending: false })
+        .limit(4);
+
+      if (error) {
+        throw error;
+      }
+
+      setListings((data as any) || []);
+    } catch (error) {
+      console.error('Error fetching listings:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const formatListings = listings.map(listing => {
+    const reviews = listing.reviews || [];
+    const reviewCount = reviews.length;
+    const averageRating = reviewCount > 0
+      ? reviews.reduce((acc: number, r: any) => acc + r.rating, 0) / reviewCount
+      : 0;
+
+    return {
+      id: listing.id,
+      title: listing.title,
+      description: listing.description || "",
+      location: listing.location,
+      price: listing.price_per_night,
+      rating: parseFloat(averageRating.toFixed(1)),
+      reviewCount: reviewCount,
+      imageUrl: listing.images && listing.images.length > 0 ? listing.images[0] : "/placeholder.svg",
+      category: listing.space_type,
+      amenities: listing.amenities || [],
+      hostName: "Host", // We don't have host names yet
+    };
+  });
+
   return (
     <section className="py-16">
       <div className="container mx-auto px-4">
@@ -66,22 +86,46 @@ const FeaturedListings = () => {
               Featured Spaces
             </h2>
             <p className="text-muted-foreground text-lg">
-              Discover the most popular rental spaces in your area
+              Discover the latest user-submitted rental spaces
             </p>
           </div>
-          <Button variant="outline" className="hidden md:flex">
+          <Button
+            variant="outline"
+            className="hidden md:flex"
+            onClick={() => navigate('/browse-spaces')}
+          >
             View All Spaces
           </Button>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-          {featuredListings.map((listing) => (
-            <ListingCard key={listing.id} {...listing} />
-          ))}
-        </div>
+        {loading ? (
+          <div className="flex justify-center items-center py-16">
+            <Loader2 className="w-8 h-8 animate-spin text-primary" />
+          </div>
+        ) : formatListings.length === 0 ? (
+          <div className="text-center py-16">
+            <h3 className="text-xl font-semibold mb-4">No spaces available yet</h3>
+            <p className="text-muted-foreground mb-6">
+              Be the first to list your space on our platform!
+            </p>
+            <Button onClick={() => navigate('/list-space')}>
+              List Your Space
+            </Button>
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+            {formatListings.map((listing) => (
+              <ListingCard key={listing.id} {...listing} />
+            ))}
+          </div>
+        )}
 
         <div className="text-center mt-12 md:hidden">
-          <Button variant="primary" size="lg">
+          <Button
+            variant="primary"
+            size="lg"
+            onClick={() => navigate('/browse-spaces')}
+          >
             View All Spaces
           </Button>
         </div>

@@ -1,5 +1,7 @@
-import { useLocation } from "react-router-dom";
+import { useLocation, Link } from "react-router-dom";
 import { useEffect } from "react";
+import Header from "@/components/Header";
+import Footer from "@/components/Footer";
 
 const NotFound = () => {
   const location = useLocation();
@@ -9,14 +11,21 @@ const NotFound = () => {
   }, [location.pathname]);
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-gray-100">
-      <div className="text-center">
-        <h1 className="mb-4 text-4xl font-bold">404</h1>
-        <p className="mb-4 text-xl text-gray-600">Oops! Page not found</p>
-        <a href="/" className="text-blue-500 underline hover:text-blue-700">
-          Return to Home
-        </a>
-      </div>
+    <div className="min-h-screen bg-background flex flex-col">
+      <Header />
+      <main className="flex-1 flex items-center justify-center">
+        <div className="text-center p-8 bg-card rounded-2xl shadow-[var(--shadow-card)] border border-border max-w-md w-full mx-4">
+          <h1 className="mb-4 text-6xl font-bold bg-gradient-to-r from-primary to-creative bg-clip-text text-transparent">404</h1>
+          <p className="mb-8 text-xl text-muted-foreground">Oops! The space you're looking for doesn't exist.</p>
+          <Link 
+            to="/" 
+            className="inline-flex h-11 items-center justify-center rounded-md bg-primary px-8 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary/90 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50"
+          >
+            Return to Home
+          </Link>
+        </div>
+      </main>
+      <Footer />
     </div>
   );
 };

@@ -1,9 +1,28 @@
+import { useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Search, MapPin, Calendar, Users } from "lucide-react";
 import heroImage from "@/assets/hero-marketplace.jpg";
 
 const Hero = () => {
+  const navigate = useNavigate();
+  const [location, setLocation] = useState("");
+  const [spaceType, setSpaceType] = useState("");
+
+  const handleSearch = () => {
+    const params = new URLSearchParams();
+    if (location) params.set("location", location);
+    if (spaceType) params.set("type", spaceType);
+    navigate(`/browse-spaces?${params.toString()}`);
+  };
+
+  const handleKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === "Enter") {
+      handleSearch();
+    }
+  };
+
   return (
     <section className="relative min-h-[70vh] flex items-center">
       {/* Background Image */}
@@ -43,6 +62,9 @@ const Hero = () => {
                   <Input 
                     placeholder="City, neighborhood, or address"
                     className="pl-10 h-12 border-border bg-background"
+                    value={location}
+                    onChange={(e) => setLocation(e.target.value)}
+                    onKeyDown={handleKeyDown}
                   />
                 </div>
               </div>
@@ -56,6 +78,8 @@ const Hero = () => {
                   <Input 
                     placeholder="Select dates"
                     className="pl-10 h-12 border-border bg-background"
+                    readOnly
+                    onClick={() => navigate('/browse-spaces')}
                   />
                 </div>
               </div>
@@ -69,6 +93,9 @@ const Hero = () => {
                   <Input 
                     placeholder="Gaming, Studio..."
                     className="pl-10 h-12 border-border bg-background"
+                    value={spaceType}
+                    onChange={(e) => setSpaceType(e.target.value)}
+                    onKeyDown={handleKeyDown}
                   />
                 </div>
               </div>
@@ -78,6 +105,7 @@ const Hero = () => {
               variant="primary" 
               size="lg" 
               className="w-full md:w-auto mt-6 h-12 px-8"
+              onClick={handleSearch}
             >
               <Search className="w-4 h-4 mr-2" />
               Search Spaces
