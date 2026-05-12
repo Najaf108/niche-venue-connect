@@ -88,7 +88,9 @@ const Auth = () => {
     setIsLoading(true);
 
     try {
-      const redirectUrl = `${window.location.origin}/`;
+      const redirectUrl = window.location.origin.includes('localhost')
+        ? 'https://rent-spaces.netlify.app/'
+        : `${window.location.origin}/`;
 
       const { error } = await supabase.auth.signUp({
         email: signupForm.email,
