@@ -124,7 +124,7 @@ export function FiltersSidebar() {
           />
         </div>
 
-        <div className="space-y-3">
+        {/* <div className="space-y-3">
           <Label className="text-sm font-black uppercase tracking-widest text-muted-foreground/70">Radius ({filters.radius} km)</Label>
           <Slider
             min={1}
@@ -138,16 +138,16 @@ export function FiltersSidebar() {
           {!filters.latitude && (
             <p className="text-[10px] font-bold text-muted-foreground italic uppercase">Select a location to filter by distance</p>
           )}
-        </div>
+        </div> */}
 
-        <div className="flex items-center justify-between glass-input p-4 rounded-2xl">
+        {/* <div className="flex items-center justify-between glass-input p-4 rounded-2xl">
           <Label htmlFor="instant-booking" className="font-bold cursor-pointer">Instant Booking</Label>
           <Switch
             id="instant-booking"
             checked={filters.instantBooking}
             onCheckedChange={(checked) => updateFilter("instantBooking", checked)}
           />
-        </div>
+        </div> */}
 
         <div className="space-y-4">
           <Label className="text-sm font-black uppercase tracking-widest text-slate-400">Amenities</Label>
