@@ -13,7 +13,6 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { DateRangePicker } from "./DateRangePicker";
 import { LocationSearch } from "./LocationSearch";
 
 const categories = [
@@ -57,43 +56,37 @@ export function FiltersSidebar() {
   };
 
   return (
-    <div className="space-y-6 p-4 bg-card rounded-lg border shadow-sm h-fit">
-      <div>
-        <h3 className="text-lg font-semibold mb-4">Filters</h3>
-        <Button 
-          variant="outline" 
-          className="w-full mb-4"
-          onClick={() => {
-            // Reset logic could go here or separate function
-            // For now just re-trigger search
-            searchListings();
-          }}
+    <div className="glass-card p-8 space-y-8 h-fit reveal">
+      <div className="flex items-center justify-between">
+        <h3 className="text-2xl font-black tracking-tight">Filters</h3>
+        <Button
+          variant="ghost"
+          size="sm"
+          className="text-primary font-bold hover:bg-primary/5 rounded-full"
+          onClick={() => window.location.reload()}
         >
-          Apply Filters
+          Reset
         </Button>
       </div>
 
-      <div className="space-y-4">
-        <div className="space-y-2">
-          <Label>Location</Label>
-          <LocationSearch />
+      <div className="space-y-6">
+        <div className="space-y-3">
+          <Label className="text-sm font-black uppercase tracking-widest text-muted-foreground/70">Location</Label>
+          <div className="glass-input p-1 rounded-2xl">
+            <LocationSearch />
+          </div>
         </div>
 
-        <div className="space-y-2">
-          <Label>Date Range</Label>
-          <DateRangePicker />
-        </div>
-
-        <div className="space-y-2">
-          <Label>Category</Label>
+        <div className="space-y-3">
+          <Label className="text-sm font-black uppercase tracking-widest text-muted-foreground/70">Category</Label>
           <Select
             value={filters.spaceType}
             onValueChange={(val) => updateFilter("spaceType", val)}
           >
-            <SelectTrigger>
+            <SelectTrigger className="rounded-2xl border-border/50 h-12 bg-background/50 backdrop-blur">
               <SelectValue placeholder="Select category" />
             </SelectTrigger>
-            <SelectContent>
+            <SelectContent className="rounded-2xl">
               {categories.map((c) => (
                 <SelectItem key={c.value} value={c.value}>
                   {c.label}
@@ -103,18 +96,24 @@ export function FiltersSidebar() {
           </Select>
         </div>
 
-        <div className="space-y-2">
-          <Label>Guests</Label>
+        <div className="space-y-3">
+          <Label className="text-sm font-black uppercase tracking-widest text-muted-foreground/70">Capacity</Label>
           <Input
             type="number"
             min={1}
+            className="rounded-2xl border-border/50 h-12 bg-background/50 backdrop-blur"
             value={filters.guests}
             onChange={(e) => updateFilter("guests", parseInt(e.target.value) || 1)}
           />
         </div>
 
-        <div className="space-y-2">
-          <Label>Price Range (${filters.priceRange[0]} - ${filters.priceRange[1]})</Label>
+        <div className="space-y-5">
+          <div className="flex justify-between items-center">
+            <Label className="text-sm font-black uppercase tracking-widest text-muted-foreground/70">Price Range</Label>
+            <span className="text-xs font-bold text-primary bg-primary/10 px-2 py-1 rounded-full">
+              ${filters.priceRange[0]} - ${filters.priceRange[1]}
+            </span>
+          </div>
           <Slider
             min={0}
             max={1000}
@@ -125,23 +124,8 @@ export function FiltersSidebar() {
           />
         </div>
 
-        <div className="space-y-2">
-          <Label>Minimum Rating ({filters.rating} stars)</Label>
-          <div className="flex items-center space-x-2">
-            <Slider
-              min={0}
-              max={5}
-              step={1}
-              value={[filters.rating]}
-              onValueChange={(val) => updateFilter("rating", val[0])}
-              className="mt-2 flex-1"
-            />
-            <span className="text-sm w-8 text-right">{filters.rating > 0 ? filters.rating : 'Any'}</span>
-          </div>
-        </div>
-
-        <div className="space-y-2">
-          <Label>Distance Radius ({filters.radius} km)</Label>
+        <div className="space-y-3">
+          <Label className="text-sm font-black uppercase tracking-widest text-muted-foreground/70">Radius ({filters.radius} km)</Label>
           <Slider
             min={1}
             max={50}
@@ -152,34 +136,39 @@ export function FiltersSidebar() {
             className="mt-2"
           />
           {!filters.latitude && (
-            <p className="text-xs text-muted-foreground">Select a location to filter by distance</p>
+            <p className="text-[10px] font-bold text-muted-foreground italic uppercase">Select a location to filter by distance</p>
           )}
         </div>
 
-        <div className="flex items-center space-x-2">
+        <div className="flex items-center justify-between glass-input p-4 rounded-2xl">
+          <Label htmlFor="instant-booking" className="font-bold cursor-pointer">Instant Booking</Label>
           <Switch
             id="instant-booking"
             checked={filters.instantBooking}
             onCheckedChange={(checked) => updateFilter("instantBooking", checked)}
           />
-          <Label htmlFor="instant-booking">Instant Booking</Label>
         </div>
 
-        <div className="space-y-2">
-          <Label>Amenities</Label>
-          <div className="grid grid-cols-2 gap-2">
+        <div className="space-y-4">
+          <Label className="text-sm font-black uppercase tracking-widest text-slate-400">Amenities</Label>
+          <div className="grid grid-cols-1 gap-3">
             {amenitiesList.map((amenity) => (
-              <div key={amenity} className="flex items-center space-x-2">
+              <div
+                key={amenity}
+                className="flex items-center space-x-3 group cursor-pointer p-1 -ml-1 rounded-lg hover:bg-white/5 transition-colors"
+                onClick={() => handleAmenityChange(amenity, !filters.amenities.includes(amenity))}
+              >
                 <Checkbox
                   id={`amenity-${amenity}`}
                   checked={filters.amenities.includes(amenity)}
                   onCheckedChange={(checked) =>
                     handleAmenityChange(amenity, checked as boolean)
                   }
+                  className="rounded-md border-white/20 data-[state=checked]:bg-primary transition-all shadow-sm"
                 />
                 <Label
                   htmlFor={`amenity-${amenity}`}
-                  className="text-sm font-normal cursor-pointer"
+                  className="text-sm font-bold text-slate-300 cursor-pointer group-hover:text-primary transition-colors"
                 >
                   {amenity}
                 </Label>
@@ -188,6 +177,13 @@ export function FiltersSidebar() {
           </div>
         </div>
       </div>
+
+      <Button
+        className="w-full h-14 rounded-2xl bg-gradient-to-r from-primary to-creative text-white font-black shadow-lg shadow-primary/20 hover:shadow-primary/40 transition-all duration-300"
+        onClick={() => searchListings()}
+      >
+        Apply Search
+      </Button>
     </div>
   );
 }

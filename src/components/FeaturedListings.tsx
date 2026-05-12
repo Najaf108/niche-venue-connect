@@ -19,6 +19,7 @@ interface Listing {
   is_active: boolean;
   created_at: string;
   reviews?: { rating: number }[];
+  profiles?: { full_name: string | null };
 }
 
 const FeaturedListings = () => {
@@ -33,7 +34,7 @@ const FeaturedListings = () => {
   const fetchListings = async () => {
     try {
       setLoading(true);
-      const { data, error } = await supabase
+      const { data: listingsData, error: listingsError } = await supabase
         .from('listings')
         .select(`
           *,
@@ -43,11 +44,26 @@ const FeaturedListings = () => {
         .order('created_at', { ascending: false })
         .limit(4);
 
-      if (error) {
-        throw error;
+      if (listingsError) throw listingsError;
+
+      let enrichedListings = (listingsData as any) || [];
+
+      if (enrichedListings.length > 0) {
+        const userIds = Array.from(new Set(enrichedListings.map((l: any) => l.user_id)));
+        const { data: profilesData } = await supabase
+          .from('profiles')
+          .select('user_id, display_name, avatar_url')
+          .in('user_id', userIds);
+
+        if (profilesData) {
+          enrichedListings = enrichedListings.map((listing: any) => ({
+            ...listing,
+            profiles: profilesData.find((p: any) => p.user_id === listing.user_id) || null
+          }));
+        }
       }
 
-      setListings((data as any) || []);
+      setListings(enrichedListings);
     } catch (error) {
       console.error('Error fetching listings:', error);
     } finally {
@@ -71,30 +87,31 @@ const FeaturedListings = () => {
       rating: parseFloat(averageRating.toFixed(1)),
       reviewCount: reviewCount,
       imageUrl: listing.images && listing.images.length > 0 ? listing.images[0] : "/placeholder.svg",
+      images: listing.images || [],
       category: listing.space_type,
       amenities: listing.amenities || [],
-      hostName: "Host", // We don't have host names yet
+      hostName: listing.profiles?.display_name || "Host",
     };
   });
 
   return (
     <section className="py-16">
       <div className="container mx-auto px-4">
-        <div className="flex items-center justify-between mb-12">
-          <div>
-            <h2 className="text-3xl md:text-4xl font-bold mb-4">
-              Featured Spaces
+        <div className="flex flex-col md:flex-row items-start md:items-end justify-between mb-16 gap-6">
+          <div className="reveal">
+            <h2 className="text-4xl md:text-5xl font-black mb-6 tracking-tight">
+              Featured <span className="text-creative tracking-tighter">Spaces</span>
             </h2>
-            <p className="text-muted-foreground text-lg">
-              Discover the latest user-submitted rental spaces
+            <p className="text-muted-foreground text-lg max-w-2xl leading-relaxed">
+              Hand-picked specialized venues that provide the ultimate environment for your creativity.
             </p>
           </div>
           <Button
             variant="outline"
-            className="hidden md:flex"
+            className="hidden md:flex rounded-full px-8 h-12 font-bold border-primary/20 hover:border-primary/50 hover:bg-primary/5 transition-all duration-300 reveal-delayed-1"
             onClick={() => navigate('/browse-spaces')}
           >
-            View All Spaces
+            Explore All Spaces
           </Button>
         </div>
 
@@ -108,9 +125,9 @@ const FeaturedListings = () => {
             <p className="text-muted-foreground mb-6">
               Be the first to list your space on our platform!
             </p>
-            <Button onClick={() => navigate('/list-space')}>
+            {/* <Button onClick={() => navigate('/list-space')}>
               List Your Space
-            </Button>
+            </Button> */}
           </div>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">

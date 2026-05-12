@@ -86,7 +86,7 @@ export function LocationSearch() {
           onChange={handleInputChange}
           onFocus={() => setOpen(true)}
           placeholder="Search by name, city, or description..."
-          className="pl-9 pr-8"
+          className="pl-9 pr-8 border-none bg-transparent focus-visible:ring-0 text-foreground font-medium placeholder:text-muted-foreground/50"
           aria-label="Search spaces"
         />
         {inputValue && (

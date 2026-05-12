@@ -36,6 +36,7 @@ export interface Listing {
   instant_booking: boolean;
   distance?: number; // Calculated distance
   reviews?: { rating: number }[];
+  profiles?: { display_name: string | null; avatar_url: string | null };
 }
 
 interface SearchContextType {
@@ -184,14 +185,30 @@ export const SearchProvider = ({ children }: { children: ReactNode }) => {
       // Text search (if not using radius/coordinates)
       if (!currentFilters.latitude && !currentFilters.longitude && currentFilters.location) {
         const term = currentFilters.location;
-        query = query.or(`title.ilike.%${term}%,description.ilike.%${term}%,location.ilike.%${term}%`);
+        query = (query as any).or(`title.ilike.%${term}%,description.ilike.%${term}%,location.ilike.%${term}%`);
       }
 
-      const { data, error } = await query;
+      const { data: listingsData, error: listingsError } = await query;
 
-      if (error) throw error;
+      if (listingsError) throw listingsError;
 
-      let filteredData = (data || []) as Listing[];
+      let filteredData = (listingsData as unknown as Listing[]) || [];
+
+      // Fetch host profiles separately if listings exist
+      if (filteredData.length > 0) {
+        const userIds = Array.from(new Set(filteredData.map(l => l.user_id)));
+        const { data: profilesData } = await supabase
+          .from('profiles')
+          .select('user_id, display_name, avatar_url')
+          .in('user_id', userIds);
+
+        if (profilesData) {
+          filteredData = filteredData.map(listing => ({
+            ...listing,
+            profiles: profilesData.find(p => p.user_id === listing.user_id) || null
+          }));
+        }
+      }
 
       // Client-side filtering for Location (Radius)
       if (currentFilters.latitude && currentFilters.longitude) {

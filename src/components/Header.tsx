@@ -198,8 +198,8 @@ const Header = () => {
                 className={cn(
                   "hidden lg:flex items-center space-x-2 rounded-full transition-all duration-300 font-bold px-4",
                   location.pathname === '/wishlist'
-                    ? "bg-red-50 text-red-500 shadow-sm ring-1 ring-red-200"
-                    : "text-muted-foreground hover:text-red-500 hover:bg-red-50"
+                    ? "bg-red-500/10 text-red-400 shadow-sm ring-1 ring-red-500/20"
+                    : "text-muted-foreground hover:text-red-400 hover:bg-red-500/5"
                 )}
                 onClick={() => navigate('/wishlist')}
               >
@@ -276,7 +276,7 @@ const Header = () => {
                           variant="ghost"
                           className={cn(
                             "w-full justify-start rounded-xl px-4 py-6 font-bold transition-all",
-                            location.pathname === '/wishlist' ? "bg-red-50 text-red-500" : "hover:bg-red-50 hover:text-red-500"
+                            location.pathname === '/wishlist' ? "bg-red-500/10 text-red-400" : "hover:bg-red-500/5 hover:text-red-400"
                           )}
                           onClick={() => navigate('/wishlist')}
                         >
